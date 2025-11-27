@@ -54,4 +54,16 @@ function parseEnv(): Config {
   };
 }
 
-export const config = parseEnv();
+let currentConfig = parseEnv();
+
+export function getConfig(): Config {
+  return currentConfig;
+}
+
+export function reloadConfig(): Config {
+  dotenv.config({ override: true });
+  currentConfig = parseEnv();
+  return currentConfig;
+}
+
+export const config = currentConfig;

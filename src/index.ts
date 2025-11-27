@@ -1,7 +1,9 @@
 import cron from 'node-cron';
-import { config } from './config.js';
+import { config, reloadConfig } from './config.js';
 import { logger } from './logger.js';
 import { GitLabService } from './gitlab.js';
+
+let gitlabService: GitLabService;
 
 async function main() {
   logger.info('GitLab Pipeline Retry Service started');
@@ -12,7 +14,7 @@ async function main() {
   logger.info(`Log level: ${config.logLevel}`);
   logger.info('---');
 
-  const gitlabService = new GitLabService();
+  gitlabService = new GitLabService();
 
   if (!cron.validate(config.checkInterval)) {
     logger.error('Invalid cron expression in CHECK_INTERVAL');
@@ -47,4 +49,32 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
   process.exit(0);
+});
+
+process.on('SIGHUP', () => {
+  logger.info('Received SIGHUP, reloading configuration...');
+  try {
+    const oldConfig = { ...config };
+    const newConfig = reloadConfig();
+
+    logger.info('Configuration reloaded successfully');
+    logger.info(`GitLab URL: ${newConfig.gitlabUrl}`);
+    logger.info(`Project ID: ${newConfig.projectId}`);
+    logger.info(`Monitoring pipeline IDs: ${newConfig.pipelineIds.join(', ')}`);
+    logger.info(`Log level: ${newConfig.logLevel}`);
+
+    gitlabService = new GitLabService();
+    logger.info('GitLab service reinitialized with new configuration');
+
+    if (oldConfig.checkInterval !== newConfig.checkInterval) {
+      logger.warn('CHECK_INTERVAL has changed, but cron schedule cannot be updated without restart');
+      logger.warn(`Old: ${oldConfig.checkInterval}, New: ${newConfig.checkInterval}`);
+      logger.warn('Please restart the service to apply the new check interval');
+    }
+
+    logger.info('---');
+  } catch (error) {
+    logger.error('Failed to reload configuration:', error);
+    logger.error('Continuing with old configuration');
+  }
 });

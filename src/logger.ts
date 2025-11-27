@@ -23,6 +23,12 @@ export const logger = {
     }
   },
 
+  warn: (message: string, ...args: unknown[]) => {
+    if (shouldLog('info')) {
+      console.warn(`[${getTimestamp()}] [WARN]`, message, ...args);
+    }
+  },
+
   debug: (message: string, ...args: unknown[]) => {
     if (shouldLog('debug')) {
       console.log(`[${getTimestamp()}] [DEBUG]`, message, ...args);

@@ -138,6 +138,80 @@ sudo systemctl start gitlab-retry
 sudo systemctl status gitlab-retry
 ```
 
+## Configuration Hot Reload
+
+You can update the configuration without restarting the service by editing the `.env` file and sending a `SIGHUP` signal to the process.
+
+### Using systemd
+
+```bash
+# Edit the .env file
+nano /path/to/gitlab-retry/.env
+
+# Reload configuration
+sudo systemctl kill -s HUP gitlab-retry
+
+# Check logs to verify reload
+sudo journalctl -u gitlab-retry -f
+```
+
+### Using PM2
+
+#### Option 1: Use the reload script (recommended)
+
+```bash
+# Edit the .env file
+nano .env
+
+# Run the reload script
+./reload-config.sh
+```
+
+The script will automatically:
+- Check if PM2 and the service are running
+- Send SIGHUP signal
+- Display recent logs
+
+#### Option 2: Manual reload
+
+```bash
+# Edit the .env file
+nano .env
+
+# Reload configuration
+pm2 sendSignal SIGHUP gitlab-retry
+
+# Or find the process ID and send signal directly
+kill -HUP $(pm2 pid gitlab-retry)
+
+# Check logs
+pm2 logs gitlab-retry
+```
+
+### Direct Process
+
+```bash
+# Edit the .env file
+nano .env
+
+# Find the process ID
+ps aux | grep gitlab-retry
+
+# Send SIGHUP signal
+kill -HUP <process_id>
+```
+
+### What Gets Reloaded
+
+When you send `SIGHUP`, the following configuration will be reloaded:
+- `GITLAB_URL`
+- `GITLAB_TOKEN`
+- `GITLAB_PROJECT_ID`
+- `PIPELINE_IDS`
+- `LOG_LEVEL`
+
+**Note**: `CHECK_INTERVAL` changes require a full restart to take effect, as the cron scheduler cannot be updated dynamically.
+
 ## Cron Expression Examples
 
 ```bash
